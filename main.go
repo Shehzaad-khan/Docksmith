@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"docksmith/internal/build"
+	"docksmith/internal/runtime"
 )
 
 // ==========================================
@@ -98,10 +101,15 @@ func cmdBuild(args []string) {
 		os.Exit(1)
 	}
 
-	context := fs.Arg(0)
-	fmt.Printf("[Build Engine] Building image '%s' from context '%s'\n", tag, context)
-	if *noCache {
-		fmt.Println("[Build Engine] Notice: --no-cache flag detected. Skipping cache.")
+	contextDir := fs.Arg(0)
+	engine, err := build.NewEngine(tag, contextDir, *noCache)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(1)
+	}
+	if err := engine.Run(); err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(1)
 	}
 }
 
@@ -171,15 +179,75 @@ func cmdRun(args []string) {
 	}
 
 	image := fs.Arg(0)
-	cmd := fs.Args()[1:]
+	cmdOverride := fs.Args()[1:]
 
-	fmt.Printf("[Runtime] Assembling filesystem and running image '%s'\n", image)
-	if len(envVars) > 0 {
-		fmt.Printf("[Runtime] Environment Overrides applied: %v\n", []string(envVars))
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(1)
 	}
-	if len(cmd) > 0 {
-		fmt.Printf("[Runtime] Command Override applied: %s\n", strings.Join(cmd, " "))
+	baseDir := filepath.Join(homeDir, ".docksmith")
+
+	// Parse name:tag
+	name, tag := image, "latest"
+	if strings.Contains(image, ":") {
+		parts := strings.SplitN(image, ":", 2)
+		name, tag = parts[0], parts[1]
 	}
+
+	// Load manifest
+	manifestPath := filepath.Join(baseDir, "images", fmt.Sprintf("%s_%s.json", name, tag))
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Error: image '%s' not found in local store\n", image)
+		} else {
+			fmt.Fprintf(os.Stderr, "Error reading manifest: %v\n", err)
+		}
+		os.Exit(1)
+	}
+
+	var manifest build.ImageManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		fmt.Fprintf(os.Stderr, "Error parsing manifest: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Determine command: override > image CMD > error
+	command := cmdOverride
+	if len(command) == 0 {
+		command = manifest.Config.Cmd
+	}
+	if len(command) == 0 {
+		fmt.Fprintln(os.Stderr, "Error: no CMD defined in image and no command given")
+		os.Exit(1)
+	}
+
+	// Collect ordered layer paths
+	layerPaths := make([]string, 0, len(manifest.Layers))
+	for _, l := range manifest.Layers {
+		layerPaths = append(layerPaths, filepath.Join(baseDir, "layers", l.Digest))
+	}
+
+	// Merge image ENV with -e overrides (overrides win)
+	mergedEnv := runtime.MergeEnv(manifest.Config.Env, []string(envVars))
+
+	cfg := runtime.ContainerConfig{
+		LayerPaths: layerPaths,
+		Command:    command,
+		Env:        mergedEnv,
+		WorkDir:    manifest.Config.WorkingDir,
+		Stdout:     os.Stdout,
+		Stderr:     os.Stderr,
+		Stdin:      os.Stdin,
+	}
+
+	exitCode, err := runtime.RunInContainer(cfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	os.Exit(exitCode)
 }
 
 func cmdRmi(args []string) {

@@ -23,6 +23,23 @@ type ContainerConfig struct {
 	Stdin      io.Reader
 }
 
+// AssembleRootfs is the exported interface for the build layer producer.
+// It creates a fresh temp directory, extracts all layer tars in order into it,
+// and returns the path. The caller is responsible for os.RemoveAll when done.
+// Exported so the build engine can snapshot the rootfs before and after RUN
+// without going through the full RunInContainer flow.
+func AssembleRootfs(layerPaths []string) (string, error) {
+	return assembleRootfs(layerPaths)
+}
+
+// RunIsolated is the exported interface for running a command inside a
+// pre-assembled rootfs. The caller manages the rootfs lifecycle.
+// Exported so the build RUN layer producer and docksmith run share
+// the exact same isolation primitive (hard requirement per spec §6 and §8).
+func RunIsolated(rootfsPath string, cfg ContainerConfig) (int, error) {
+	return runIsolated(rootfsPath, cfg)
+}
+
 // RunInContainer is the one function the entire team calls.
 // It assembles the rootfs, isolates the process, waits for exit,
 // cleans up, and returns the exit code.

@@ -1,0 +1,52 @@
+# -----------------------------
+# Secrets and local environment
+# -----------------------------
+.env
+.env.*
+*.env
+*.local
+*.secret
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+id_rsa
+id_rsa.pub
+
+# -----------------------------
+# Go build artifacts and reports
+# -----------------------------
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# Common local binary names
+/docksmith
+/docksmith.exe
+
+# -----------------------------
+# Logs and temp files
+# -----------------------------
+*.log
+*.tmp
+*.temp
+
+# -----------------------------
+# IDE and OS noise
+# -----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

@@ -1,4 +1,4 @@
-\# 🐳 Docksmith
+\# Docksmith
 
 
 
@@ -14,7 +14,7 @@ Docksmith is designed to demonstrate how build caching, content-addressing, proc
 
 
 
-\## 🛑 Scope \& Constraints
+\## Scope \& Constraints
 
 
 
@@ -44,7 +44,7 @@ Docksmith is designed to demonstrate how build caching, content-addressing, proc
 
 
 
-\## 🏗️ Architecture \& State
+\## Architecture \& State
 
 
 
@@ -52,7 +52,7 @@ All Docksmith state is stored locally on disk in the user's home directory.
 
 
 
-\### 📁 Directory Layout
+\### Directory Layout
 
 
 
@@ -74,7 +74,7 @@ All Docksmith state is stored locally on disk in the user's home directory.
 
 
 
-\## 📜 Supported Docksmithfile Instructions
+\## Supported Docksmithfile Instructions
 
 
 
@@ -104,7 +104,7 @@ The build engine parses a file named `Docksmithfile`. It strictly supports the f
 
 
 
-\## 💻 CLI Reference
+\## CLI Reference
 
 
 
@@ -130,11 +130,11 @@ The build engine parses a file named `Docksmithfile`. It strictly supports the f
 
 
 
-\## ⚙️ Prerequisites \& Setup
+\## Prerequisites \& Setup
 
 
 
-\### 🖥️ System Requirements
+\### System Requirements
 
 
 
@@ -144,7 +144,7 @@ The build engine parses a file named `Docksmithfile`. It strictly supports the f
 
 
 
-\### 📥 Clone the Repository
+\### Clone the Repository
 
 
 
@@ -158,7 +158,7 @@ cd docksmith
 
 
 
-\### 🚀 Initialize Local State
+\### Initialize Local State
 
 
 
@@ -174,7 +174,7 @@ Run the CLI once to automatically generate the `\~/.docksmith/` directory struct
 
 
 
-\### 📦 Import Base Image
+\### Import Base Image
 
 
 
@@ -186,7 +186,7 @@ Download a minimal root filesystem (e.g., Alpine Linux `rootfs.tar.gz`) for your
 
 
 
-\## 👥 The Team
+\## The Team
 
 
 
