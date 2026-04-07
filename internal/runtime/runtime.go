@@ -137,6 +137,14 @@ func runIsolated(rootfsPath string, cfg ContainerConfig) (int, error) {
 		workDir = "/"
 	}
 
+	// Ensure WORKDIR exists inside the container rootfs before exec.
+	// This keeps runtime behaviour consistent when images set WORKDIR
+	// without a subsequent RUN/COPY step that would otherwise create it.
+	workDirInRootfs := filepath.Join(rootfsPath, strings.TrimPrefix(workDir, "/"))
+	if err := os.MkdirAll(workDirInRootfs, 0755); err != nil {
+		return -1, fmt.Errorf("creating workdir %s in rootfs: %w", workDir, err)
+	}
+
 	if len(cfg.Command) == 0 {
 		return -1, fmt.Errorf("no command specified and no CMD defined in image")
 	}
