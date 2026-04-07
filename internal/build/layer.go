@@ -328,6 +328,11 @@ func snapshotDir(root string) (map[string]string, error) {
 		if info.IsDir() {
 			return nil
 		}
+		// Only hash regular files. Symlinks, devices, sockets, etc. are excluded
+		// from snapshot hashing to avoid open() failures on dangling links.
+		if !info.Mode().IsRegular() {
+			return nil
+		}
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
