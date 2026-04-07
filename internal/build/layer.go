@@ -188,9 +188,9 @@ func ProduceRUNLayer(cfg RUNLayerConfig) (string, int64, error) {
 
 	// Step 6: compute delta — files that are new or have changed content
 	var entries []tarEntry
-	for relPath, newHash := range after {
-		oldHash, existed := before[relPath]
-		if existed && oldHash == newHash {
+	for relPath, newMeta := range after {
+		oldMeta, existed := before[relPath]
+		if existed && oldMeta.Hash == newMeta.Hash && oldMeta.Mode == newMeta.Mode {
 			continue // unchanged: skip
 		}
 		absPath := filepath.Join(rootfsPath, relPath)
@@ -316,11 +316,16 @@ func writeTarLayer(entries []tarEntry, layersDir string) (string, int64, error) 
 
 // ── Filesystem Snapshot ────────────────────────────────────────────────────────
 
+type snapshotMeta struct {
+	Hash string
+	Mode os.FileMode
+}
+
 // snapshotDir walks root and records every regular file as relPath → sha256 digest.
 // Used to compute the filesystem delta before and after a RUN command.
 // Directories are not hashed — their existence is implied by their files.
-func snapshotDir(root string) (map[string]string, error) {
-	result := make(map[string]string)
+func snapshotDir(root string) (map[string]snapshotMeta, error) {
+	result := make(map[string]snapshotMeta)
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -341,7 +346,7 @@ func snapshotDir(root string) (map[string]string, error) {
 		if err != nil {
 			return fmt.Errorf("hashing %s for snapshot: %w", path, err)
 		}
-		result[rel] = digest
+		result[rel] = snapshotMeta{Hash: digest, Mode: info.Mode().Perm()}
 		return nil
 	})
 	return result, err
