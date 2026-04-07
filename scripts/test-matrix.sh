@@ -88,6 +88,43 @@ ensure_prereqs() {
     log "Import Alpine first, then rerun this script."
     exit 1
   fi
+
+  # Spec note: rmi deletes all layer files with no reference counting.
+  # That can leave alpine_latest.json present while its layer tar is missing.
+  local images_dir layers_dir manifest_path layer_digest layer_path
+  images_dir="$HOME/.docksmith/images"
+  layers_dir="$HOME/.docksmith/layers"
+  manifest_path="$images_dir/alpine_latest.json"
+
+  if [ ! -f "$manifest_path" ]; then
+    log "Expected alpine manifest not found at: $manifest_path"
+    log "Re-import Alpine base image, then rerun this script."
+    exit 1
+  fi
+
+  layer_digest="$(awk '
+    /"layers"[[:space:]]*:/ {in_layers=1}
+    in_layers && /"digest"[[:space:]]*:/ {
+      gsub(/[",]/, "", $2)
+      print $2
+      exit
+    }
+  ' "$manifest_path")"
+
+  if [ -z "$layer_digest" ]; then
+    log "Could not parse alpine layer digest from: $manifest_path"
+    log "Re-import Alpine base image, then rerun this script."
+    exit 1
+  fi
+
+  layer_path="$layers_dir/$layer_digest"
+  if [ ! -f "$layer_path" ]; then
+    log "Alpine manifest exists but backing layer file is missing:"
+    log "  $layer_path"
+    log "This is expected after running rmi per problem statement (no reference counting)."
+    log "Restore Alpine layer+manifest, then rerun this script."
+    exit 1
+  fi
 }
 
 # 1) FROM success + basic sample build
