@@ -21,7 +21,10 @@ type base struct {
 	lineNum int
 }
 
+// Raw returns the original instruction text exactly as written in the file.
 func (b base) Raw() string { return b.raw }
+
+// Line returns the 1-based line number used for user-facing parse errors.
 func (b base) Line() int   { return b.lineNum }
 
 // FromInstr: FROM <image>[:<tag>]
@@ -31,6 +34,7 @@ type FromInstr struct {
 	Tag   string // e.g. "3.18"; defaults to "latest"
 }
 
+// Kind identifies this parsed instruction as FROM.
 func (f FromInstr) Kind() string { return "FROM" }
 
 // CopyInstr: COPY <src>... <dest>
@@ -42,6 +46,7 @@ type CopyInstr struct {
 	Dest string
 }
 
+// Kind identifies this parsed instruction as COPY.
 func (c CopyInstr) Kind() string { return "COPY" }
 
 // RunInstr: RUN <command>
@@ -51,6 +56,7 @@ type RunInstr struct {
 	Command string
 }
 
+// Kind identifies this parsed instruction as RUN.
 func (r RunInstr) Kind() string { return "RUN" }
 
 // WorkdirInstr: WORKDIR <path>
@@ -59,6 +65,7 @@ type WorkdirInstr struct {
 	Path string
 }
 
+// Kind identifies this parsed instruction as WORKDIR.
 func (w WorkdirInstr) Kind() string { return "WORKDIR" }
 
 // EnvInstr: ENV <KEY>=<VALUE>
@@ -68,6 +75,7 @@ type EnvInstr struct {
 	Value string
 }
 
+// Kind identifies this parsed instruction as ENV.
 func (e EnvInstr) Kind() string { return "ENV" }
 
 // CmdInstr: CMD ["exec","arg",...]
@@ -77,6 +85,7 @@ type CmdInstr struct {
 	Parts []string
 }
 
+// Kind identifies this parsed instruction as CMD.
 func (c CmdInstr) Kind() string { return "CMD" }
 
 // ParseFile reads a Docksmithfile at path and returns a slice of Instructions.
@@ -167,6 +176,8 @@ func ParseFile(path string) ([]Instruction, error) {
 
 // ── per-instruction parsers ──────────────────────────────────────────────────
 
+// parseFrom validates FROM syntax and applies the default tag when omitted.
+// It rejects empty image names and malformed image:tag combinations.
 func parseFrom(b base, rest string) (FromInstr, error) {
 	if rest == "" {
 		return FromInstr{}, fmt.Errorf("FROM requires an image name")
@@ -185,6 +196,8 @@ func parseFrom(b base, rest string) (FromInstr, error) {
 	return FromInstr{base: b, Image: image, Tag: tag}, nil
 }
 
+// parseCopy splits COPY arguments into source list and destination path.
+// At least one source and one destination token are required.
 func parseCopy(b base, rest string) (CopyInstr, error) {
 	if rest == "" {
 		return CopyInstr{}, fmt.Errorf("COPY requires at least one source and a destination")
@@ -200,6 +213,8 @@ func parseCopy(b base, rest string) (CopyInstr, error) {
 	}, nil
 }
 
+// parseEnv validates and splits ENV in KEY=VALUE form.
+// The key must be non-empty to avoid ambiguous runtime behavior.
 func parseEnv(b base, rest string) (EnvInstr, error) {
 	idx := strings.Index(rest, "=")
 	if idx <= 0 {
@@ -212,6 +227,8 @@ func parseEnv(b base, rest string) (EnvInstr, error) {
 	}, nil
 }
 
+// parseCmd validates CMD JSON-array syntax and decodes command parts.
+// This enforces exec-form commands for predictable runtime execution.
 func parseCmd(b base, rest string) (CmdInstr, error) {
 	if rest == "" {
 		return CmdInstr{}, fmt.Errorf("CMD requires a JSON array argument")

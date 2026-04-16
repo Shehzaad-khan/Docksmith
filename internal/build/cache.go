@@ -16,6 +16,8 @@ import (
 // by that step. Persisted as ~/.docksmith/cache/index.json.
 type cacheIndex map[string]string
 
+// loadCacheIndex reads the cache key map from disk and returns an empty map
+// when the file does not exist yet, so first-time builds still work.
 func loadCacheIndex(baseDir string) (cacheIndex, error) {
 	path := filepath.Join(baseDir, "cache", "index.json")
 	data, err := os.ReadFile(path)
@@ -32,6 +34,8 @@ func loadCacheIndex(baseDir string) (cacheIndex, error) {
 	return idx, nil
 }
 
+// saveCacheIndex persists the in-memory cache key map back to index.json.
+// This makes cache hits available to future build runs.
 func saveCacheIndex(baseDir string, idx cacheIndex) error {
 	path := filepath.Join(baseDir, "cache", "index.json")
 	data, err := json.MarshalIndent(idx, "", "  ")

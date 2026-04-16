@@ -19,10 +19,14 @@ import (
 
 type stringSlice []string
 
+// String returns a readable comma-separated value for help text and debug output.
+// The flag package calls this when it needs to print the current flag value.
 func (s *stringSlice) String() string {
 	return strings.Join(*s, ", ")
 }
 
+// Set appends one -e value each time the flag appears on the command line.
+// This lets users pass multiple environment overrides in a single run command.
 func (s *stringSlice) Set(value string) error {
 	*s = append(*s, value)
 	return nil
@@ -48,6 +52,8 @@ type Manifest struct {
 // TASK 2: Local State Initialization
 // ==========================================
 
+// initStateDirs prepares Docksmith's local on-disk state under ~/.docksmith.
+// It creates images, layers, and cache directories if they do not exist yet.
 func initStateDirs() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -75,6 +81,8 @@ func initStateDirs() (string, error) {
 // COMMAND HANDLERS
 // ==========================================
 
+// cmdBuild parses build flags, validates required inputs, and starts the build engine.
+// It exits with an error code when input is invalid or the build fails.
 func cmdBuild(args []string) {
 	fs := flag.NewFlagSet("build", flag.ExitOnError)
 	var tag string
@@ -113,6 +121,8 @@ func cmdBuild(args []string) {
 	}
 }
 
+// cmdImages reads image manifests from the local store and prints a compact table.
+// Invalid or unreadable manifest files are skipped so listing stays resilient.
 func cmdImages() {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -160,6 +170,8 @@ func cmdImages() {
 	}
 }
 
+// cmdRun resolves an image, chooses the final command, merges environment values,
+// and runs the process inside an isolated container filesystem.
 func cmdRun(args []string) {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	var envVars stringSlice
@@ -250,6 +262,8 @@ func cmdRun(args []string) {
 	os.Exit(exitCode)
 }
 
+// cmdRmi removes one local image manifest and then removes its referenced layers.
+// It is a direct delete operation and exits non-zero if required inputs are missing.
 func cmdRmi(args []string) {
 	fs := flag.NewFlagSet("rmi", flag.ExitOnError)
 	fs.Usage = func() {
@@ -316,6 +330,8 @@ func cmdRmi(args []string) {
 // TASK 1: Entry Point (CLI Parser)
 // ==========================================
 
+// main initializes local state, parses the first CLI token as a command,
+// and dispatches execution to the matching command handler.
 func main() {
 	if _, err := initStateDirs(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error initializing state:", err)
